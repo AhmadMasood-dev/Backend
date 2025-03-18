@@ -93,7 +93,6 @@ const loginUser = asyncHandler(async (req, res) => {
   // send cookies
   //return response
   const { username, email, password } = req.body;
-  console.log("username", username, email, password);
   if (!email && !username) {
     throw new ApiError(400, "Username or email is required");
   }
@@ -136,9 +135,15 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
-  await User.findByIdAndUpdate(req.user._id, {
-    $set: { refreshToken: undefined },
-  });
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $unset: { refreshToken: 1 },
+    },
+    {
+      new: true,
+    },
+  );
 
   const options = {
     httpOnly: true,
@@ -153,7 +158,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-  const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken;
+  const incomingRefreshToken = req.cookies.refreshToken;
 
   if (!incomingRefreshToken) {
     throw new ApiError(400, "Refresh Token is required");
@@ -196,9 +201,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const changeCurrentPassowrd = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
-
   const user = await User.findById(req.user._id);
-  console.log("User", user);
 
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
   if (!isPasswordCorrect) {
@@ -222,14 +225,13 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
 
-  if (!fullName && !email) {
+  if (!fullName || !email) {
     throw new ApiError(400, "Fullname or email is required");
   }
-  const user = await User.findById(
+
+  const user = await User.findByIdAndUpdate(
     req.user._id,
-    {
-      $set: { fullName, email },
-    },
+    { $set: { fullName, email } },
     { new: true },
   ).select("-password");
 
@@ -239,6 +241,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
+  console.log("req.files", req.files);
   const avatarLocalPath = req.files?.path;
 
   if (!avatarLocalPath) {

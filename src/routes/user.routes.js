@@ -33,7 +33,7 @@ router.route("/login").post(loginUser);
 //secure route
 router.route("/logout").post(verifyJwt, logoutUser);
 
-router.route("refresh-token").post(refreshAccessToken);
+router.route("/refresh-token").post(refreshAccessToken);
 
 router.route("/change-password").post(verifyJwt, changeCurrentPassowrd);
 
