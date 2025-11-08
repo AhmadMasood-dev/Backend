@@ -9,9 +9,40 @@ import { json } from "express"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    const { page = 1, limit = 10, query, sortBy = "createdBy", sortType = "desc", userId } = req.query
     //TODO: get all videos based on query, sort, pagination
-})
+    console.log("query", query)
+    const filter = {};
+
+    // If a search query is provided, filter videos by title or description
+    if (query) {
+        filter.$or = [
+            { title: { $regex: query, $options: "i" } },
+            { description: { $regex: query, $options: "i" } }
+        ];
+    }
+    if (userId) {
+        filter.owner = userId;
+    }
+    const sortOrder = sortType === "asc" ? 1 : -1;
+
+    // Fetch videos with pagination, filtering, and sorting
+    const videos = await Video.find(filter)
+        .sort({ [sortBy]: sortOrder })
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit));
+
+    console.log("req.user", req.user)
+    // Get total count for pagination
+    const totalVideos = await Video.countDocuments(filter);
+
+    return res.status(200).json(new ApiResponse(200, {
+        videos,
+        totalVideos,
+        totalPages: Math.ceil(totalVideos / limit),
+        currentPage: parseInt(page),
+    }, "Videos fetched successfully"));
+});
 
 const publishAVideo = asyncHandler(async (req, res) => {
     // TODO: get video, upload to cloudinary, create video
